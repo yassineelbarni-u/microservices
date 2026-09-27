@@ -1,0 +1,84 @@
+version: '3.9'
+
+# --- DEV MODE: Only databases run in Docker -----------------------------------
+# Spring Boot services run locally with hot-reload (./gradlew bootRun)
+# Run: docker-compose up -d
+
+services:
+
+  # --- Customer Service Database --------------------------------------------
+  postgres-customer:
+    image: postgres:16-alpine
+    container_name: postgres-customer
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: customerdb
+      POSTGRES_USER: customer_user
+      POSTGRES_PASSWORD: customer_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_customer_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U customer_user -d customerdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Inventory Service Database -------------------------------------------
+  postgres-inventory:
+    image: postgres:16-alpine
+    container_name: postgres-inventory
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: inventorydb
+      POSTGRES_USER: inventory_user
+      POSTGRES_PASSWORD: inventory_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_inventory_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory_user -d inventorydb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Order Service Database -----------------------------------------------
+  postgres-order:
+    image: postgres:16-alpine
+    container_name: postgres-order
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_order_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d orderdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- pgAdmin (UI to browse databases) ------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres-customer
+      - postgres-inventory
+      - postgres-order
+
+volumes:
+  postgres_customer_data:
+  postgres_inventory_data:
+  postgres_order_data:

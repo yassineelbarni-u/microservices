@@ -1,0 +1,53 @@
+server:
+  port: 9090
+
+spring:
+  application:
+    name: gateway-service
+
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      discovery:
+        service-name: ${spring.application.name}
+        prefer-ip-address: true
+        register: true
+
+    gateway:
+      server:
+        mvc:
+          routes:
+            - id: customer-service
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/v1/customers,/api/v1/customers/**
+            - id: inventory-service
+              uri: http://localhost:8082
+              predicates:
+                - Path=/api/v1/products,/api/v1/products/**
+            - id: order-service
+              uri: http://localhost:8083
+              predicates:
+                - Path=/api/v1/orders,/api/v1/orders/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  cloud:
+    consul:
+      enabled: false
+      discovery:
+        enabled: false
+        register: false
