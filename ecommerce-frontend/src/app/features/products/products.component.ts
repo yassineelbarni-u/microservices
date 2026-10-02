@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../core/services/product.service';
 import { Product } from '../../core/models/product.model';
+import { ToastService } from '../../core/services/toast.service';
 
 @Component({
   selector: 'app-products',
@@ -118,6 +119,7 @@ import { Product } from '../../core/models/product.model';
 })
 export class ProductsComponent implements OnInit {
   private svc = inject(ProductService);
+  private toast = inject(ToastService);
   products: Product[] = [];
   categories = ['Electronics', 'Furniture', 'Clothing', 'Food', 'Other'];
   search = ''; filterCategory: any = ''; filterStatus: any = '';
@@ -136,12 +138,20 @@ export class ProductsComponent implements OnInit {
 
   save() {
     if (!this.form.name || !this.form.price || this.form.quantity === undefined || !this.form.category) return;
-    const obs = this.editingId ? this.svc.update(this.editingId, this.form as Product) : this.svc.create(this.form as Product);
-    obs.subscribe(() => { this.closeModal(); this.loadProducts(); });
+    const isEdit = !!this.editingId;
+    const obs = isEdit ? this.svc.update(this.editingId!, this.form as Product) : this.svc.create(this.form as Product);
+    obs.subscribe(() => {
+      this.closeModal();
+      this.loadProducts();
+      this.toast.success(isEdit ? 'Produit mis à jour avec succès !' : 'Produit créé avec succès !');
+    });
   }
 
   delete(p: Product) {
-    if (confirm(`Supprimer "${p.name}" ?`)) this.svc.delete(p.id!).subscribe(() => this.loadProducts());
+    if (confirm(`Supprimer "${p.name}" ?`)) this.svc.delete(p.id!).subscribe(() => {
+      this.loadProducts();
+      this.toast.success(`Produit "${p.name}" supprimé.`);
+    });
   }
 
   statusBadge(s: string) {

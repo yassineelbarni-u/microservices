@@ -8,6 +8,7 @@ import { Order, OrderItem, OrderStatus } from '../../core/models/order.model';
 import { Customer } from '../../core/models/customer.model';
 import { Product } from '../../core/models/product.model';
 import { forkJoin } from 'rxjs';
+import { ToastService } from '../../core/services/toast.service';
 
 @Component({
   selector: 'app-orders',
@@ -158,6 +159,7 @@ export class OrdersComponent implements OnInit {
   private orderSvc = inject(OrderService);
   private customerSvc = inject(CustomerService);
   private productSvc = inject(ProductService);
+  private toast = inject(ToastService);
 
   orders: Order[] = [];
   customers: Customer[] = [];
@@ -203,14 +205,24 @@ export class OrdersComponent implements OnInit {
 
   save() {
     if (!this.newOrder.customerId || this.newOrder.items.length === 0) return;
-    this.orderSvc.create(this.newOrder as Order).subscribe(() => { this.closeModal(); this.loadOrders(); });
+    this.orderSvc.create(this.newOrder as Order).subscribe(() => {
+      this.closeModal();
+      this.loadOrders();
+      this.toast.success('Commande créée avec succès !');
+    });
   }
 
   updateStatus(o: Order, status: OrderStatus) {
-    this.orderSvc.updateStatus(o.id!, status).subscribe(() => this.loadOrders());
+    this.orderSvc.updateStatus(o.id!, status).subscribe(() => {
+      this.loadOrders();
+      this.toast.info(`Statut de la commande #${o.id} mis à jour : ${status}`);
+    });
   }
 
   delete(o: Order) {
-    if (confirm(`Supprimer la commande #${o.id} ?`)) this.orderSvc.delete(o.id!).subscribe(() => this.loadOrders());
+    if (confirm(`Supprimer la commande #${o.id} ?`)) this.orderSvc.delete(o.id!).subscribe(() => {
+      this.loadOrders();
+      this.toast.success(`Commande #${o.id} supprimée.`);
+    });
   }
 }

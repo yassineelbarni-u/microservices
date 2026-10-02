@@ -1,8 +1,21 @@
 version: '3.9'
 
-# --- DEV MODE: Only databases run in Docker -----------------------------------
-# Spring Boot services run locally with hot-reload (./gradlew bootRun)
-# Run: docker-compose up -d
+# --- DEV MODE ----------------------------------------------------------------
+# Ce qui tourne dans Docker :
+#   ✅ postgres-customer  (port 5432)
+#   ✅ postgres-inventory (port 5433)
+#   ✅ postgres-order     (port 5434)
+#   ✅ pgAdmin            (port 5050)
+#   ✅ frontend Angular   (port 4200) ← hot-reload activé
+#
+# Ce qui tourne en LOCAL (hors Docker) :
+#   🔧 customer-service  → ./gradlew bootRun --args='--spring.profiles.active=dev'
+#   🔧 inventory-service → ./gradlew bootRun --args='--spring.profiles.active=dev'
+#   🔧 order-service     → ./gradlew bootRun --args='--spring.profiles.active=dev'
+#
+# Lancer tout : docker compose up -d
+# Accéder au frontend : http://localhost:4200
+# -----------------------------------------------------------------------------
 
 services:
 
@@ -77,6 +90,26 @@ services:
       - postgres-customer
       - postgres-inventory
       - postgres-order
+
+  # --- Angular Frontend (Dev Server avec hot-reload) ------------------------
+  frontend:
+    build:
+      context: ./ecommerce-frontend
+      dockerfile: Dockerfile.dev
+    container_name: ecommerce-frontend
+    restart: unless-stopped
+    ports:
+      - "4200:4200"
+    volumes:
+      # :Z = label SELinux requis sur Fedora/RHEL avec Podman
+      - ./ecommerce-frontend/src:/app/src:Z
+    environment:
+      # Polling nécessaire sur Linux pour détecter les changements de fichiers
+      - CHOKIDAR_USEPOLLING=true
+    extra_hosts:
+      # Permet au conteneur d'accéder aux services Spring Boot sur ta machine
+      # host.docker.internal → 127.0.0.1 de l'hôte (Linux uniquement)
+      - "host.docker.internal:host-gateway"
 
 volumes:
   postgres_customer_data:

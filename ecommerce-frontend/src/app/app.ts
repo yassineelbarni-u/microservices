@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from './shared/components/sidebar/sidebar.component';
+import { ToastContainerComponent } from './shared/components/toast-container/toast-container.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent],
+  imports: [RouterOutlet, SidebarComponent, ToastContainerComponent],
   template: `
     <div class="app-layout">
       <app-sidebar />
@@ -13,6 +14,8 @@ import { SidebarComponent } from './shared/components/sidebar/sidebar.component'
         <router-outlet />
       </main>
     </div>
+    <!-- Global toast notifications overlay -->
+    <app-toast-container />
   `,
   styles: [`
     .app-layout {

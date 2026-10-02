@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomerService } from '../../core/services/customer.service';
 import { Customer } from '../../core/models/customer.model';
+import { ToastService } from '../../core/services/toast.service';
 
 @Component({
   selector: 'app-customers',
@@ -57,6 +58,17 @@ import { Customer } from '../../core/models/customer.model';
             }
           </tbody>
         </table>
+      } @else if (loading) {
+        <div class="empty-state">
+          <div style="font-size:2rem; animation: spin 1s linear infinite; display:inline-block">⏳</div>
+          <p>Chargement des clients...</p>
+        </div>
+      } @else if (error) {
+        <div class="empty-state">
+          <div class="icon">⚠️</div>
+          <p style="color:var(--danger)">Impossible de joindre le serveur.<br>Vérifiez que customer-service est démarré sur le port 8081.</p>
+          <button class="btn btn-primary" style="margin-top:1rem" (click)="loadCustomers()">🔄 Réessayer</button>
+        </div>
       } @else {
         <div class="empty-state">
           <div class="icon">👥</div>
@@ -88,18 +100,26 @@ import { Customer } from '../../core/models/customer.model';
 })
 export class CustomersComponent implements OnInit {
   private svc = inject(CustomerService);
+  private toast = inject(ToastService);
   customers: Customer[] = [];
   search = '';
   filterStatus: any = '';
   showModal = false;
   editingId: number | null = null;
   form: Partial<Customer> = {};
+  loading = false;
+  error = false;
 
   ngOnInit() { this.loadCustomers(); }
 
   loadCustomers() {
+    this.loading = true;
+    this.error = false;
     this.svc.getAll(this.filterStatus || undefined, this.search || undefined)
-      .subscribe(data => this.customers = data);
+      .subscribe({
+        next: data => { this.customers = data; this.loading = false; },
+        error: () => { this.loading = false; this.error = true; }
+      });
   }
 
   onSearch() { if (this.search.length >= 2 || this.search === '') this.loadCustomers(); }
@@ -114,15 +134,23 @@ export class CustomersComponent implements OnInit {
 
   save() {
     if (!this.form.firstName || !this.form.lastName || !this.form.email) return;
-    const obs = this.editingId
-      ? this.svc.update(this.editingId, this.form as Customer)
+    const isEdit = !!this.editingId;
+    const obs = isEdit
+      ? this.svc.update(this.editingId!, this.form as Customer)
       : this.svc.create(this.form as Customer);
-    obs.subscribe(() => { this.closeModal(); this.loadCustomers(); });
+    obs.subscribe(() => {
+      this.closeModal();
+      this.loadCustomers();
+      this.toast.success(isEdit ? 'Client mis à jour avec succès !' : 'Client créé avec succès !');
+    });
   }
 
   delete(c: Customer) {
     if (confirm(`Supprimer ${c.firstName} ${c.lastName} ?`))
-      this.svc.delete(c.id!).subscribe(() => this.loadCustomers());
+      this.svc.delete(c.id!).subscribe(() => {
+        this.loadCustomers();
+        this.toast.success(`Client ${c.firstName} ${c.lastName} supprimé.`);
+      });
   }
 
   statusBadge(s: string) {
