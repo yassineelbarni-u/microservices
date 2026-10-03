@@ -4,7 +4,8 @@ import { RouterLink } from '@angular/router';
 import { CustomerService } from '../../core/services/customer.service';
 import { ProductService } from '../../core/services/product.service';
 import { OrderService } from '../../core/services/order.service';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-dashboard',
@@ -12,7 +13,7 @@ import { forkJoin } from 'rxjs';
   imports: [CommonModule, RouterLink],
   template: `
     <div class="page-header">
-      <h1>📊 Dashboard</h1>
+      <h1>&#x1F4CA; Dashboard</h1>
       <p>Vue d'ensemble de votre plateforme e-commerce</p>
     </div>
 
@@ -24,15 +25,17 @@ import { forkJoin } from 'rxjs';
             <div class="stat-value">{{ stat.value }}</div>
             <div class="stat-label">{{ stat.label }}</div>
           </div>
-          <a [routerLink]="stat.link" class="stat-link">Voir ➔</a>
+          <a [routerLink]="stat.link" class="stat-link">Voir &#x2192;</a>
         </div>
       }
     </div>
 
     <div class="recent-section">
       <div class="card">
-        <h2>Commandes récentes</h2>
-        @if (recentOrders.length > 0) {
+        <h2>Commandes recentes</h2>
+        @if (loading) {
+          <div class="empty-state"><p>Chargement...</p></div>
+        } @else if (recentOrders.length > 0) {
           <table>
             <thead>
               <tr>
@@ -55,7 +58,7 @@ import { forkJoin } from 'rxjs';
           </table>
         } @else {
           <div class="empty-state">
-            <p>Aucune commande récente</p>
+            <p>Aucune commande recente</p>
           </div>
         }
       </div>
@@ -81,27 +84,36 @@ export class DashboardComponent implements OnInit {
   private productService = inject(ProductService);
   private orderService = inject(OrderService);
 
+  loading = true;
+
   stats = [
-    { icon: '👥', value: 0, label: 'Clients', link: '/customers' },
-    { icon: '📦', value: 0, label: 'Produits', link: '/products' },
-    { icon: '🛒', value: 0, label: 'Commandes', link: '/orders' },
-    { icon: '💰', value: '0 MAD', label: 'Chiffre d\'affaires', link: '/orders' }
+    { icon: '&#x1F465;', value: 0 as number | string, label: 'Clients', link: '/customers' },
+    { icon: '&#x1F4E6;', value: 0 as number | string, label: 'Produits', link: '/products' },
+    { icon: '&#x1F6D2;', value: 0 as number | string, label: 'Commandes', link: '/orders' },
+    { icon: '&#x1F4B0;', value: '0 MAD' as number | string, label: "Chiffre d'affaires", link: '/orders' }
   ];
 
   recentOrders: any[] = [];
 
   ngOnInit() {
+    this.load();
+  }
+
+  load() {
+    this.loading = true;
+    // catchError sur chaque requete individuellement -> si une echoue, les autres continuent
     forkJoin({
-      customers: this.customerService.getAll(),
-      products: this.productService.getAll(),
-      orders: this.orderService.getAll()
+      customers: this.customerService.getAll().pipe(catchError(() => of([]))),
+      products: this.productService.getAll().pipe(catchError(() => of([]))),
+      orders: this.orderService.getAll().pipe(catchError(() => of([])))
     }).subscribe(({ customers, products, orders }) => {
       this.stats[0].value = customers.length;
       this.stats[1].value = products.length;
       this.stats[2].value = orders.length;
-      const total = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+      const total = orders.reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0);
       this.stats[3].value = total.toFixed(2) + ' MAD';
-      this.recentOrders = orders.slice(-5).reverse();
+      this.recentOrders = [...orders].reverse().slice(0, 5);
+      this.loading = false;
     });
   }
 

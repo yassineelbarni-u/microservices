@@ -5,61 +5,37 @@ import { ToastService } from '../services/toast.service';
 
 /**
  * Global HTTP error interceptor.
- * - Adds a 10s timeout to every request (prevents infinite loading)
+ * - Adds a 30s timeout to every request (Spring Boot peut etre lent au demarrage)
  * - Catches all HTTP errors and displays a user-friendly toast message
  */
 export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const toast = inject(ToastService);
 
   return next(req).pipe(
-    timeout(10000),   // ← max 10 secondes par requête
-    catchError((error) => {
+    timeout(30000),
+    catchError((err) => {
       let message = 'Une erreur inattendue est survenue.';
 
-      if (error.name === 'TimeoutError') {
-        message = 'Le serveur met trop de temps à répondre (timeout 10s). Vérifiez que les services Spring Boot sont démarrés.';
-      } else if (error instanceof HttpErrorResponse) {
-        if (error.status === 0) {
-          message = 'Impossible de joindre le serveur. Vérifiez que les services sont démarrés.';
-        } else if (error.status === 400) {
-          const detail = error.error?.message || error.error?.error || null;
-          message = detail ? `Données invalides : ${detail}` : 'Données invalides. Vérifiez le formulaire.';
-        } else if (error.status === 404) {
+      if (err.name === 'TimeoutError') {
+        message = 'Le serveur met trop de temps a repondre. Verifiez que les services Spring Boot sont demarres.';
+      } else if (err instanceof HttpErrorResponse) {
+        if (err.status === 0) {
+          message = 'Impossible de joindre le serveur. Verifiez que les services sont demarres.';
+        } else if (err.status === 400) {
+          const detail = err.error?.message || err.error?.error || null;
+          message = detail ? `Donnees invalides : ${detail}` : 'Donnees invalides. Verifiez le formulaire.';
+        } else if (err.status === 404) {
           message = 'Ressource introuvable.';
-        } else if (error.status === 409) {
-          const detail = error.error?.message || null;
-          message = detail ?? 'Cette ressource existe déjà.';
-        } else if (error.status === 500) {
+        } else if (err.status === 409) {
+          const detail = err.error?.message || null;
+          message = detail ?? 'Cette ressource existe deja.';
+        } else if (err.status === 500) {
           message = 'Erreur interne du serveur. Consultez les logs Spring Boot.';
         }
       }
 
       toast.error(message);
-      return throwError(() => error);
-    })
-  );
-};
-      let message = 'Une erreur inattendue est survenue.';
-
-      if (error.status === 0) {
-        // Network error / backend not reachable
-        message = 'Impossible de joindre le serveur. Vérifiez que les services sont démarrés.';
-      } else if (error.status === 400) {
-        // Validation error — try to extract backend message
-        const detail = error.error?.message || error.error?.error || null;
-        message = detail ? `Données invalides : ${detail}` : 'Données invalides. Vérifiez le formulaire.';
-      } else if (error.status === 404) {
-        message = 'Ressource introuvable.';
-      } else if (error.status === 409) {
-        // Duplicate / already exists
-        const detail = error.error?.message || null;
-        message = detail ?? 'Cette ressource existe déjà.';
-      } else if (error.status === 500) {
-        message = 'Erreur interne du serveur. Consultez les logs Spring Boot.';
-      }
-
-      toast.error(message);
-      return throwError(() => error);
+      return throwError(() => err);
     })
   );
 };

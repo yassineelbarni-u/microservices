@@ -11,16 +11,16 @@ import { ToastService } from '../../core/services/toast.service';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="page-header">
-      <h1>👥 Clients</h1>
+      <h1>&#x1F465; Clients</h1>
       <p>Gestion de vos clients</p>
     </div>
 
     <div class="toolbar card" style="margin-bottom:1.25rem; display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
       <div class="search-bar" style="flex:1; min-width:200px;">
-        <span class="icon">🔍</span>
-        <input [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Rechercher un client...">
+        <span class="icon">&#x1F50D;</span>
+        <input [(ngModel)]="search" (ngModelChange)="applyFilters()" placeholder="Rechercher un client...">
       </div>
-      <select [(ngModel)]="filterStatus" (ngModelChange)="loadCustomers()">
+      <select [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()">
         <option value="">Tous les statuts</option>
         <option value="ACTIVE">Actif</option>
         <option value="INACTIVE">Inactif</option>
@@ -30,20 +30,31 @@ import { ToastService } from '../../core/services/toast.service';
     </div>
 
     <div class="card">
-      @if (customers.length > 0) {
+      @if (loading) {
+        <div class="empty-state">
+          <div style="font-size:2rem;">&#x23F3;</div>
+          <p>Chargement des clients...</p>
+        </div>
+      } @else if (hasError) {
+        <div class="empty-state">
+          <div class="icon">&#x26A0;&#xFE0F;</div>
+          <p style="color:var(--danger)">Impossible de joindre le serveur.<br>Verifiez que customer-service est demarre sur le port 8081.</p>
+          <button class="btn btn-primary" style="margin-top:1rem" (click)="loadCustomers()">&#x1F504; Reessayer</button>
+        </div>
+      } @else if (filtered.length > 0) {
         <table>
           <thead>
             <tr>
               <th>Nom</th>
               <th>Email</th>
-              <th>Téléphone</th>
+              <th>Telephone</th>
               <th>Statut</th>
-              <th>Créé le</th>
+              <th>Cree le</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            @for (c of customers; track c.id) {
+            @for (c of filtered; track c.id) {
               <tr>
                 <td><strong>{{ c.firstName }} {{ c.lastName }}</strong></td>
                 <td>{{ c.email }}</td>
@@ -51,28 +62,17 @@ import { ToastService } from '../../core/services/toast.service';
                 <td><span class="badge" [class]="statusBadge(c.status!)">{{ c.status }}</span></td>
                 <td>{{ c.createdAt | date:'dd/MM/yyyy' }}</td>
                 <td class="actions">
-                  <button class="btn btn-ghost" (click)="openModal(c)" style="padding:0.35rem 0.75rem" title="Modifier">✏️</button>
-                  <button class="btn btn-danger" (click)="delete(c)" style="padding:0.35rem 0.75rem" title="Supprimer">🗑️</button>
+                  <button class="btn btn-ghost" (click)="openModal(c)" style="padding:0.35rem 0.75rem" title="Modifier">&#x270F;&#xFE0F;</button>
+                  <button class="btn btn-danger" (click)="delete(c)" style="padding:0.35rem 0.75rem" title="Supprimer">&#x1F5D1;&#xFE0F;</button>
                 </td>
               </tr>
             }
           </tbody>
         </table>
-      } @else if (loading) {
-        <div class="empty-state">
-          <div style="font-size:2rem; animation: spin 1s linear infinite; display:inline-block">⏳</div>
-          <p>Chargement des clients...</p>
-        </div>
-      } @else if (error) {
-        <div class="empty-state">
-          <div class="icon">⚠️</div>
-          <p style="color:var(--danger)">Impossible de joindre le serveur.<br>Vérifiez que customer-service est démarré sur le port 8081.</p>
-          <button class="btn btn-primary" style="margin-top:1rem" (click)="loadCustomers()">🔄 Réessayer</button>
-        </div>
       } @else {
         <div class="empty-state">
-          <div class="icon">👥</div>
-          <p>Aucun client trouvé</p>
+          <div class="icon">&#x1F465;</div>
+          <p>Aucun client trouve</p>
         </div>
       }
     </div>
@@ -82,16 +82,16 @@ import { ToastService } from '../../core/services/toast.service';
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h2>{{ editingId ? 'Modifier' : 'Nouveau' }} client</h2>
-            <button (click)="closeModal()">❌</button>
+            <button (click)="closeModal()">&#x2715;</button>
           </div>
-          <div class="form-group"><label>Prénom *</label><input [(ngModel)]="form.firstName" placeholder="Prénom"></div>
+          <div class="form-group"><label>Prenom *</label><input [(ngModel)]="form.firstName" placeholder="Prenom"></div>
           <div class="form-group"><label>Nom *</label><input [(ngModel)]="form.lastName" placeholder="Nom"></div>
           <div class="form-group"><label>Email *</label><input [(ngModel)]="form.email" type="email" placeholder="email@exemple.com"></div>
-          <div class="form-group"><label>Téléphone</label><input [(ngModel)]="form.phone" placeholder="+212600000000"></div>
+          <div class="form-group"><label>Telephone</label><input [(ngModel)]="form.phone" placeholder="+212600000000"></div>
           <div class="form-group"><label>Adresse</label><input [(ngModel)]="form.address" placeholder="Adresse"></div>
           <div class="modal-footer">
             <button class="btn btn-ghost" (click)="closeModal()">Annuler</button>
-            <button class="btn btn-primary" (click)="save()">{{ editingId ? 'Enregistrer' : 'Créer' }}</button>
+            <button class="btn btn-primary" (click)="save()">{{ editingId ? 'Enregistrer' : 'Creer' }}</button>
           </div>
         </div>
       </div>
@@ -101,28 +101,59 @@ import { ToastService } from '../../core/services/toast.service';
 export class CustomersComponent implements OnInit {
   private svc = inject(CustomerService);
   private toast = inject(ToastService);
-  customers: Customer[] = [];
+
+  // Toutes les donnees chargees depuis le backend
+  allCustomers: Customer[] = [];
+  // Donnees filtrees affichees dans la table
+  filtered: Customer[] = [];
+
   search = '';
-  filterStatus: any = '';
+  filterStatus = '';
   showModal = false;
   editingId: number | null = null;
   form: Partial<Customer> = {};
   loading = false;
-  error = false;
+  hasError = false;
 
   ngOnInit() { this.loadCustomers(); }
 
+  /** Charge TOUS les clients depuis le backend une seule fois */
   loadCustomers() {
     this.loading = true;
-    this.error = false;
-    this.svc.getAll(this.filterStatus || undefined, this.search || undefined)
+    this.hasError = false;
+    this.svc.getAll()
       .subscribe({
-        next: data => { this.customers = data; this.loading = false; },
-        error: () => { this.loading = false; this.error = true; }
+        next: data => {
+          this.allCustomers = data;
+          this.loading = false;
+          this.applyFilters();
+        },
+        error: () => {
+          this.loading = false;
+          this.hasError = true;
+        }
       });
   }
 
-  onSearch() { if (this.search.length >= 2 || this.search === '') this.loadCustomers(); }
+  /** Filtre localement sans faire de requete reseau */
+  applyFilters() {
+    let result = [...this.allCustomers];
+
+    if (this.filterStatus) {
+      result = result.filter(c => c.status === this.filterStatus);
+    }
+
+    if (this.search && this.search.length >= 2) {
+      const q = this.search.toLowerCase();
+      result = result.filter(c =>
+        `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.phone?.includes(q)
+      );
+    }
+
+    this.filtered = result;
+  }
 
   openModal(c?: Customer) {
     this.editingId = c?.id ?? null;
@@ -141,7 +172,7 @@ export class CustomersComponent implements OnInit {
     obs.subscribe(() => {
       this.closeModal();
       this.loadCustomers();
-      this.toast.success(isEdit ? 'Client mis à jour avec succès !' : 'Client créé avec succès !');
+      this.toast.success(isEdit ? 'Client mis a jour avec succes !' : 'Client cree avec succes !');
     });
   }
 
@@ -149,7 +180,7 @@ export class CustomersComponent implements OnInit {
     if (confirm(`Supprimer ${c.firstName} ${c.lastName} ?`))
       this.svc.delete(c.id!).subscribe(() => {
         this.loadCustomers();
-        this.toast.success(`Client ${c.firstName} ${c.lastName} supprimé.`);
+        this.toast.success(`Client ${c.firstName} ${c.lastName} supprime.`);
       });
   }
 
